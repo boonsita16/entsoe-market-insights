@@ -48,3 +48,4 @@ python market_plot.py --demo --output dashboard.html
 - The notebook remains unchanged for documentation and exploratory work.
 - The reusable Python module centralizes the data-loading and Plotly chart logic.
 - Demo mode works with the bundled sample CSVs in the notebook folder and does not require an API token.
+- Need to include gas price according to prices spike on 22 Sep 
