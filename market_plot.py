@@ -19,6 +19,7 @@ NOTEBOOK_DIR = ROOT_DIR / "notebook"
 DEMO_FILES = {
 	"day_ahead_prices": "demo_day_ahead_prices.csv",
 	"generation": "demo_generation.csv",
+	"generation_forecast": "demo_generation_forecast.csv",
 	"load": "demo_load.csv",
 	"net_position": "demo_net_position.csv",
 	"crossborder_flows": "demo_crossborder_flows.csv",
@@ -57,7 +58,7 @@ def load_demo_data() -> dict[str, pd.Series | pd.DataFrame]:
 			continue
 
 		frame = pd.read_csv(csv_path, index_col=0, parse_dates=True)
-		if name in {"day_ahead_prices", "load", "net_position", "crossborder_flows"} and isinstance(frame, pd.DataFrame):
+		if name in {"day_ahead_prices", "generation_forecast", "load", "net_position", "crossborder_flows"} and isinstance(frame, pd.DataFrame):
 			results[name] = frame.iloc[:, 0]
 		else:
 			results[name] = frame
@@ -101,6 +102,7 @@ def query_live_data(country_code: str, destination_zone: str, start: pd.Timestam
 
 	safe_query("day_ahead_prices", client.query_day_ahead_prices, country_code, start=start_ts, end=end_ts)
 	safe_query("generation", client.query_generation, country_code, start=start_ts, end=end_ts, psr_type=None)
+	safe_query("generation_forecast", client.query_generation_forecast, country_code, start=start_ts, end=end_ts)
 	safe_query("load", client.query_load, country_code, start=start_ts, end=end_ts)
 	safe_query("net_position", client.query_net_position, country_code, start=start_ts, end=end_ts)
 	safe_query("crossborder_flows", client.query_crossborder_flows, country_code, destination_zone, start=start_ts, end=end_ts)
@@ -193,6 +195,7 @@ def build_dashboard(data_results: dict[str, Any], country_code: str, destination
 	"""Create the Plotly dashboard."""
 	df_price = data_results.get("day_ahead_prices")
 	df_generation = data_results.get("generation")
+	df_forecast = data_results.get("generation_forecast")
 	df_load = data_results.get("load")
 	df_net_pos = data_results.get("net_position")
 	df_flows = data_results.get("crossborder_flows")
@@ -201,6 +204,7 @@ def build_dashboard(data_results: dict[str, Any], country_code: str, destination
 		raise ValueError("Generation or price data is missing for the selected period.")
 
 	actual_m1, actual_m2, actual_m3, actual_total = build_generation_groups(df_generation)
+	forecast_total = df_forecast.sum(axis=1) if isinstance(df_forecast, pd.DataFrame) else df_forecast
 	load_series = df_load.iloc[:, 0] if isinstance(df_load, pd.DataFrame) else df_load
 	net_pos_series = df_net_pos.iloc[:, 0] if isinstance(df_net_pos, pd.DataFrame) else df_net_pos
 	flow_series = df_flows.iloc[:, 0] if isinstance(df_flows, pd.DataFrame) else df_flows
@@ -227,6 +231,17 @@ def build_dashboard(data_results: dict[str, Any], country_code: str, destination
 		),
 		secondary_y=False,
 	)
+
+	if forecast_total is not None:
+		fig.add_trace(
+			go.Scatter(
+				x=forecast_total.index,
+				y=forecast_total.values,
+				name="Total Generation Forecast",
+				line=dict(color="#7f7fcc", width=2, dash="dash"),
+			),
+			secondary_y=False,
+		)
 
 	if net_pos_series is not None:
 		fig.add_trace(
