@@ -5,7 +5,7 @@ An interactive Plotly dashboard for analyzing system load, generation by merit-o
 ## Project structure
 
 - [notebook/01-data-to-csv.ipynb](notebook/01-data-to-csv.ipynb): downloads ENTSO-E demo data and saves it as CSV files.
-- [notebook/02-market-plot.ipynb](notebook/02-market-plot.ipynb): the original exploratory notebook kept for reference. See the plot in [nbviewer](https://nbviewer.org/github/boonsita16/entsoe-market-insights/blob/main/notebook/02-market-plot.ipynb).
+- [notebook/02-market-plot.ipynb](notebook/02-market-plot.ipynb): the original exploratory notebook kept for reference. See the plot in [htmlpreview](https://htmlpreview.github.io/?https://github.com/boonsita16/entsoe-market-insights/blob/main/notebook/grid_analysis_dashboard.html). 
 - [market_plot.py](market_plot.py): the reusable source code that creates the dashboard. This is the version intended for ongoing development and script-based execution.
 
 ## Run the dashboard
