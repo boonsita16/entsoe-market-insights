@@ -5,8 +5,17 @@ An interactive Plotly dashboard for analyzing system load, generation by merit-o
 ## Project structure
 
 - [notebook/01-data-to-csv.ipynb](notebook/01-data-to-csv.ipynb): downloads ENTSO-E demo data and saves it as CSV files.
-- [notebook/02-market-plot.ipynb](notebook/02-market-plot.ipynb): the original exploratory notebook kept for reference. See the plot in [htmlpreview](https://htmlpreview.github.io/?https://github.com/boonsita16/entsoe-market-insights/blob/main/notebook/grid_analysis_dashboard.html). 
-- [market_plot.py](market_plot.py): the reusable source code that creates the dashboard. This is the version intended for ongoing development and script-based execution.
+- [notebook/02-market-plot.ipynb](notebook/02-market-plot.ipynb): exploratory analysis and dashboard. See the plot in [htmlpreview](https://htmlpreview.github.io/?https://github.com/boonsita16/entsoe-market-insights/blob/main/notebook/grid_analysis_dashboard.html).
+- [market_plot.py](market_plot.py): the reusable source code that prints the hourly-adjusted statistical analysis and creates the dashboard. This is the version intended for ongoing development and script-based execution.
+- [requirements.txt](requirements.txt): Python libraries required by the script.
+
+## Install dependencies
+
+Install the required libraries from the repository root:
+
+```bash
+python -m pip install -r requirements.txt
+```
 
 ## Run the dashboard
 
@@ -45,7 +54,7 @@ python market_plot.py --demo --output dashboard.html
 
 ## Notes
 
-- The notebook remains unchanged for documentation and exploratory work.
-- The reusable Python module centralizes the data-loading and Plotly chart logic.
+- The statistical report uses actual generation from merit-order group 1 (renewables and nuclear) and day-ahead prices. It removes average hour-of-day patterns with OLS regressions before reporting residual covariance and correlation; the result describes an association, not causation.
+- The reusable Python module centralizes the data-loading, statistical analysis, and Plotly chart logic.
 - Demo mode works with the bundled sample CSVs in the notebook folder and does not require an API token.
 - Need to include gas price according to prices spike on 22 Sep 

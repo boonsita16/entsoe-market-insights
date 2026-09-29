@@ -7,12 +7,14 @@ import argparse
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from entsoe import EntsoePandasClient
 from entsoe.exceptions import NoMatchingDataError
 from entsoe.mappings import Area, NEIGHBOURS, lookup_area
 from plotly.subplots import make_subplots
+import statsmodels.api as sm
 
 ROOT_DIR = Path(__file__).resolve().parent
 NOTEBOOK_DIR = ROOT_DIR / "notebook"
@@ -149,6 +151,48 @@ def build_generation_groups(df_generation: pd.DataFrame) -> tuple[pd.Series, pd.
 	actual_m3 = df_generation[m3_existing].sum(axis=1) if m3_existing else pd.Series(0, index=df_generation.index)
 	actual_total = df_generation[available_cols].sum(axis=1)
 	return actual_m1, actual_m2, actual_m3, actual_total
+
+
+def print_statistical_analysis(data_results: dict[str, Any], country_code: str) -> None:
+	"""Report the price and renewable-generation relationship after controlling for hour of day."""
+	df_price = data_results.get("day_ahead_prices")
+	df_generation = data_results.get("generation")
+	if df_price is None or df_generation is None:
+		print("Statistics unavailable: day-ahead price or generation data is missing.")
+		return
+
+	actual_m1, _, _, _ = build_generation_groups(df_generation)
+	df_stats = pd.concat(
+		[df_price.rename("price"), actual_m1.rename("renewable_generation")],
+		axis=1,
+	).dropna()
+	if len(df_stats) < 2 or df_stats["price"].nunique() < 2 or df_stats["renewable_generation"].nunique() < 2:
+		print("Statistics unavailable: insufficient variation in overlapping price and generation data.")
+		return
+
+	df_stats["hour"] = df_stats.index.hour
+	hour_dummies = pd.get_dummies(df_stats["hour"], prefix="hour", drop_first=True).astype(int)
+	control_features = (
+		sm.add_constant(hour_dummies)
+		if not hour_dummies.empty
+		else pd.DataFrame({"const": np.ones(len(df_stats))}, index=df_stats.index)
+	)
+	price_residuals = sm.OLS(df_stats["price"], control_features).fit().resid
+	renewable_residuals = sm.OLS(df_stats["renewable_generation"], control_features).fit().resid
+	pure_covariance = np.cov(price_residuals, renewable_residuals)[0, 1]
+	pure_correlation = np.corrcoef(price_residuals, renewable_residuals)[0, 1]
+
+	print("\n" + "=" * 60)
+	print("   HOURLY-ADJUSTED ELECTRICITY MARKET ANALYSIS")
+	print("=" * 60)
+	print(f"Bidding zone          : {country_code}")
+	print("Method                : OLS residuals controlling for hour of day")
+	print(f"Overlapping intervals : {len(df_stats)}")
+	print("-" * 60)
+	print(f"Residual covariance   : {pure_covariance:,.2f}")
+	print(f"Residual correlation  : {pure_correlation:.4f}")
+	print("Interpretation        : Association only; this analysis does not establish causation.")
+	print("=" * 60 + "\n")
 
 
 def prompt_for_origin_zone() -> tuple[str, str]:
@@ -369,6 +413,7 @@ def main() -> None:
 			start_ts, end_ts = prompt_for_date_range(local_tz)
 			data_results = query_live_data(country_code, destination_zone, start_ts, end_ts)
 
+	print_statistical_analysis(data_results, country_code)
 	fig = build_dashboard(data_results, country_code, destination_zone, local_tz)
 
 	if args.output:
